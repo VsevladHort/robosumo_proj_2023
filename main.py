@@ -1,16 +1,30 @@
-# This is a sample Python script.
+from time import sleep
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from gpiozero import Button
+import program
+
+this_program = program.ProgramStatus()
+button_start = Button(1)
+button_stop = Button(2)
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def start_program():
+    sleep(5)
+    this_program.start()
 
 
-# Press the green button in the gutter to run the script.
+def stop_program():
+    this_program.stop()
+
+
+def set_up_buttons():
+    button_start.when_pressed = start_program
+    button_stop.when_released = stop_program
+
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    set_up_buttons()
+    while True:
+        if this_program.is_program_running():
+            print("I am alive")
+            sleep(3)
