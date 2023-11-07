@@ -1,11 +1,12 @@
 from time import sleep
 
-from gpiozero import Button
+from gpiozero import Button, LED
 import program
 
 this_program = program.ProgramStatus()
-button_start = Button(1)
-button_stop = Button(2)
+button_start = Button(17)
+button_stop = Button(27)
+led = LED(22)
 
 
 def start_program():
@@ -26,5 +27,7 @@ if __name__ == '__main__':
     set_up_buttons()
     while True:
         if this_program.is_program_running():
-            print("I am alive")
-            sleep(3)
+            led.blink(0.5, 0.5)
+        else:
+            led.off()
+            sleep(0.01)
