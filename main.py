@@ -1,13 +1,16 @@
 import sys
 from time import sleep
 
-from gpiozero import Button, LED, LineSensor
+from gpiozero import Button, LED, Motor
 import program
 import edge_detection
 
 this_program = program.ProgramStatus()
 button_start = Button(17)  # these are BCM numbers
 button_stop = Button(27)
+
+motor_left = Motor(5, 6)
+motor_right = Motor(13, 19)
 
 edge_detector = edge_detection.EdgeDetector()
 
@@ -27,9 +30,49 @@ def set_up_buttons():
     button_stop.when_released = stop_program
 
 
+def handle_edge_detection():
+    edge_detector_states = edge_detector.get_sensor_states()
+    if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
+        motor_left.backward(1)
+        motor_right.backward(1)  # moving straight backwards
+        return True
+    elif edge_detector_states["top_left"] and edge_detector_states["bottom_left"]:
+        motor_left.forward(0.6)
+        motor_right.forward(1)  # moving forwards while turning right
+        return True
+    elif edge_detector_states["top_right"] and edge_detector_states["bottom_right"]:
+        motor_left.forward(1)
+        motor_right.forward(0.6)  # moving forwards while turning left
+        return True
+    elif edge_detector_states["bottom_left"] and edge_detector_states["bottom_right"]:
+        motor_left.forward(1)
+        motor_right.forward(1)  # moving straights forwards
+        return True
+    elif edge_detector_states["top_left"]:
+        motor_left.backward(1)
+        motor_right.backward(0.6)  # moving backwards while turning left
+        return True
+    elif edge_detector_states["bottom_left"]:
+        motor_left.forward(0.6)
+        motor_right.forward(1)  # moving forwards while turning right
+        return True
+    elif edge_detector_states["top_right"]:
+        motor_left.backward(1)
+        motor_right.backward(0.6)  # moving backwards while turning left
+        return True
+    elif edge_detector_states["bottom_right"]:
+        motor_left.forward(1)
+        motor_right.forward(0.6)  # moving forwards while turning left
+        return True
+    else:
+        return False
+
+
 if __name__ == '__main__':
     try:
         set_up_buttons()
+        motor_left.stop()
+        motor_right.stop()
         first_launch = True
         while True:
             if this_program.is_program_running():
@@ -37,23 +80,7 @@ if __name__ == '__main__':
                     sleep(5)  # sleep in the main thread
                     first_launch = False
                 led.blink(0.5, 0.5)
-                edge_detector_states = edge_detector.get_sensor_states()
-                if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
-                    continue
-                elif edge_detector_states["top_left"] and edge_detector_states["bottom_left"]:
-                    continue
-                elif edge_detector_states["top_right"] and edge_detector_states["bottom_right"]:
-                    continue
-                elif edge_detector_states["bottom_left"] and edge_detector_states["bottom_right"]:
-                    continue
-                elif edge_detector_states["top_left"]:
-                    continue
-                elif edge_detector_states["bottom_left"]:
-                    continue
-                elif edge_detector_states["top_right"]:
-                    continue
-                elif edge_detector_states["bottom_right"]:
-                    continue
+                handle_edge_detection()
             else:
                 first_launch = True
                 led.off()
