@@ -37,6 +37,23 @@ if __name__ == '__main__':
                     sleep(5)  # sleep in the main thread
                     first_launch = False
                 led.blink(0.5, 0.5)
+                edge_detector_states = edge_detector.get_sensor_states()
+                if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
+                    continue
+                elif edge_detector_states["top_left"] and edge_detector_states["bottom_left"]:
+                    continue
+                elif edge_detector_states["top_right"] and edge_detector_states["bottom_right"]:
+                    continue
+                elif edge_detector_states["bottom_left"] and edge_detector_states["bottom_right"]:
+                    continue
+                elif edge_detector_states["top_left"]:
+                    continue
+                elif edge_detector_states["bottom_left"]:
+                    continue
+                elif edge_detector_states["top_right"]:
+                    continue
+                elif edge_detector_states["bottom_right"]:
+                    continue
             else:
                 first_launch = True
                 led.off()
