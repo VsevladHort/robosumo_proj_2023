@@ -1,17 +1,20 @@
 import sys
 from time import sleep
 
-from gpiozero import Button, LED
+from gpiozero import Button, LED, LineSensor
 import program
+import edge_detection
 
 this_program = program.ProgramStatus()
 button_start = Button(17)  # these are BCM numbers
 button_stop = Button(27)
+
+edge_detector = edge_detection.EdgeDetector()
+
 led = LED(22)
 
 
 def start_program():
-    sleep(5)  # sleeps in the callback thread, should probably avoid it
     this_program.start()
 
 
@@ -27,10 +30,15 @@ def set_up_buttons():
 if __name__ == '__main__':
     try:
         set_up_buttons()
+        first_launch = True
         while True:
             if this_program.is_program_running():
+                if first_launch:
+                    sleep(5)  # sleep in the main thread
+                    first_launch = False
                 led.blink(0.5, 0.5)
             else:
+                first_launch = True
                 led.off()
                 sleep(0.01)
     except Exception as e:
