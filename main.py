@@ -80,7 +80,8 @@ if __name__ == '__main__':
                     sleep(5)  # sleep in the main thread
                     first_launch = False
                 led.blink(0.5, 0.5)
-                handle_edge_detection()
+                if handle_edge_detection():
+                    sleep(1)  # give the robot some time to get away from the edge
             else:
                 first_launch = True
                 led.off()
