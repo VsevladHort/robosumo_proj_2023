@@ -210,7 +210,7 @@ if __name__ == "__main__":
                     turn_left()
                 elif last_seen == 2:
                     turn_right()
-                else:
+                elif last_seen != 0:
                     turn_right()
                 sleep(0.01) # Do we need it?
             else:
