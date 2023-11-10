@@ -1,9 +1,22 @@
 import sys
 from time import sleep
 
-from gpiozero import Button, LED, Motor
+from gpiozero import Button, RGBLED, Motor, DistanceSensor
 import program
 import edge_detection
+import ultrasonic_opponent_detection
+import numpy
+import vl53l5cx_ctypes as vl53l5cx
+
+DISTANCE_THRESHOLD = 700 # 70cm limit in mm
+DISTANCE_THRESHOLD_ULTRASONIC = 0.7 # 70cm limit
+TURNING_SPEED_FOR_SEARCHING_TARGET = 0.5 # speed at which to run the motors while turning during search
+TURNING_SPEED_FOR_CENTERING_TARGET = 0.6 # Scales the speed at which robot turns when trying to keep it's target in the center of it's FOV
+
+print("Uploading firmware, please wait...")
+vl53 = vl53l5cx.VL53L5CX()
+print("Done!")
+vl53.set_resolution(8 * 8)
 
 this_program = program.ProgramStatus()
 button_start = Button(17)  # these are BCM numbers
@@ -14,7 +27,15 @@ motor_right = Motor(13, 19)
 
 edge_detector = edge_detection.EdgeDetector()
 
-led = LED(22)
+ultrasonic_opponent_detector = ultrasonic_opponent_detection.OpponentDetector(DISTANCE_THRESHOLD_ULTRASONIC)
+
+last_seen = -1 # the last direction opponent was found
+# -1 - not found
+# 0 - front
+# 1 - left
+# 2 - right
+
+led = RGBLED(10, 9, 11)
 
 
 def start_program():
@@ -26,8 +47,20 @@ def stop_program():
 
 
 def set_up_buttons():
-    button_start.when_pressed = start_program  # callbacks are handled in the implicitly created callback thread
+    button_start.when_pressed = (
+        start_program  # callbacks are handled in the implicitly created callback thread
+    )
     button_stop.when_released = stop_program
+
+
+def turn_right():
+    motor_left.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
+    motor_right.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
+
+
+def turn_left():
+    motor_left.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
+    motor_right.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
 
 def handle_edge_detection():
@@ -66,9 +99,97 @@ def handle_edge_detection():
         return True
     else:
         return False
+    
+
+def consider_ultrasonic_sensors ():
+    distances = ultrasonic_opponent_detector.get_sensor_states()
+    if (distances["left"] > 0 and distances["right"] > 0):
+        if distances["left"] < distances["right"]: 
+            turn_left()
+            return 1
+        else: 
+            turn_right()
+            return 2
+    elif distances["left"] > 0:
+        turn_left()
+        return 1
+    elif distances["right"] > 0:
+        turn_right()
+        return 2
+    else:
+        return -1
+    
 
 
-if __name__ == '__main__':
+def handle_opponent_search():
+    if vl53.data_ready():
+        data = vl53.get_data()
+
+        distance = numpy.array(data.distance).reshape((8, 8))
+
+        scalar = 0
+        target_distance = 0
+        n_distances = 0
+        # Filter out unwanted distance values
+        # Unlike in the pimoroni example, I think we should only care about ditance to the object and not it's reflectance
+        for ox in range(8):
+            for oy in range(8):
+                d = distance[ox][oy]
+                if d > DISTANCE_THRESHOLD:
+                    distance[ox][oy] = 0
+                else:
+                    scalar += d
+
+        # Get a total from all the distances within our accepted target
+        for ox in range(8):
+            for oy in range(8):
+                d = distance[ox][oy]
+                target_distance += d
+                if d > 0:
+                    n_distances += 1
+
+        # Average the target distance
+        if n_distances > 0:
+            target_distance /= n_distances
+        else:
+            target_distance = 0
+
+        distance = numpy.flip(distance, axis=0) # I am having a hard time visualising this, should we really be flipping the matrix?
+        # Not so sure this will work, we'll have to tinker quite a bit here, I expect.
+
+        # Calculate the center of mass along X and Y (Should probably just remove Y in the future)
+        x = 0
+        y = 0
+        if scalar > 0:
+            for ox in range(8):
+                for oy in range(8):
+                    y += distance[ox][oy] * ox
+            y /= scalar
+            y /= 3.5
+            y -= 1.0
+
+            for oy in range(8):
+                for ox in range(8):
+                    x += distance[ox][oy] * oy
+            x /= scalar # x should be the only thing we care about when it comes to aligning the robot
+            x /= 3.5 # 3.5 - average value of our coordinates
+            x -= 1.0 # at this point x is in range from 0 to 2, we bring it to -1 to 1 for speed control
+
+            print("Object detected at x: {:.2f}, y: {:.2f}".format(x, y))
+
+            # Our robot will try to attack the target at full speed.
+            print("Distance is {:.1f} mm.".format(target_distance))
+
+            motor_left.forward(min(1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET)), 1) # x > 0 will make the robot start turning right
+            motor_right.forward(min(1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET), 1)) # x < 0 will make the robot start turning left
+            return 0 # Let's consider 0 to be an indicator that opponent is in front of the robot
+        else: 
+            return consider_ultrasonic_sensors()
+    else:
+        return consider_ultrasonic_sensors()
+
+
+if __name__ == "__main__":
     try:
         set_up_buttons()
         motor_left.stop()
@@ -79,13 +200,31 @@ if __name__ == '__main__':
                 if first_launch:
                     sleep(5)  # sleep in the main thread
                     first_launch = False
-                led.blink(0.5, 0.5)
+                led.color = (0, 1, 0) # light up the LED green
                 if handle_edge_detection():
                     sleep(1)  # give the robot some time to get away from the edge
+                opponent_search_result = handle_opponent_search()
+                if opponent_search_result != -1:
+                    last_seen = opponent_search_result
+                elif last_seen == 1:
+                    turn_left()
+                elif last_seen == 2:
+                    turn_right()
+                else:
+                    turn_right()
+                sleep(0.01) # Do we need it?
             else:
                 first_launch = True
+                motor_left.stop()
+                motor_right.stop()
                 led.off()
                 sleep(0.01)
     except Exception as e:
-        sys.exit(1)  # gpiozero automatic cleanup for GPIO is only done when exceptions are handled
+        motor_left.stop()
+        motor_right.stop()
+        led.off()
+        vl53.stop_ranging()
+        sys.exit(
+            1
+        )  # gpiozero automatic cleanup for GPIO is only done when exceptions are handled
         #  https://gpiozero.readthedocs.io/en/stable/migrating_from_rpigpio.html#cleanup
