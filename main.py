@@ -225,9 +225,12 @@ def handle_opponent_search():
             )
             return 0  # Let's consider 0 to be an indicator that opponent is in front of the robot
         else:
-            return -1
+            return consider_ultrasonic_sensors()
     else:
-        return -1
+        if last_seen != 0:
+            return consider_ultrasonic_sensors()
+        else:
+            return 0
 
 
 if __name__ == "__main__":
@@ -261,7 +264,7 @@ if __name__ == "__main__":
                 first_launch = True
                 motor_left.stop()
                 motor_right.stop()
-                led.color = (0, 1, 1)  # light up the LED yellow
+                led.color = (1, 1, 0)  # light up the LED yellow
                 sleep(0.01)
     except Exception as e:
         motor_left.stop()
