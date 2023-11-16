@@ -150,7 +150,7 @@ def handle_opponent_search():
         target_distance = 0
         n_distances = 0
         # Filter out unwanted distance values
-        # Unlike in the pimoroni example, I think we should only care about ditance to the object and not it's reflectance
+        # Unlike in the pimoroni example, I think we should only care about distance to the object and not it's reflectance
         for ox in range(8):
             for oy in range(8):
                 d = distance[ox][oy]
@@ -160,7 +160,10 @@ def handle_opponent_search():
                 ):
                     distance[ox][oy] = 0
                 else:
-                    scalar += d
+                    distance[ox][oy] = (
+                        DISTANCE_THRESHOLD - d
+                    )  # We are insterested in closer targets having a higner weight, thus this operation
+                    scalar += distance[ox][oy]
 
         # Get a total from all the distances within our accepted target
         for ox in range(8):
@@ -173,14 +176,12 @@ def handle_opponent_search():
         # Average the target distance
         if n_distances > 0:
             target_distance /= n_distances
+            target_distance = DISTANCE_THRESHOLD - target_distance
         else:
             target_distance = 0
 
         print("Flipping")
-        distance = numpy.flip(
-            distance, axis=0
-        )  # I am having a hard time visualising this, should we really be flipping the matrix?
-        # Not so sure this will work, we'll have to tinker quite a bit here, I expect.
+        distance = numpy.flip(distance, axis=0)
 
         # Calculate the center of mass along X and Y (Should probably just remove Y in the future)
         print(distance)
