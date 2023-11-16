@@ -7,10 +7,12 @@ import edge_detection
 import ultrasonic_opponent_detection
 import numpy
 import vl53l5cx_ctypes as vl53l5cx
+from vl53l5cx_ctypes import STATUS_RANGE_VALID, STATUS_RANGE_VALID_LARGE_PULSE
 
 from gpiozero.pins.rpigpio import RPiGPIOFactory
+from gpiozero.pins.pigpio import PiGPIOFactory
 
-factory = RPiGPIOFactory()
+factory = PiGPIOFactory()
 
 DISTANCE_THRESHOLD = 700  # 70cm limit in mm
 DISTANCE_THRESHOLD_ULTRASONIC = 0.7  # 70cm limit
@@ -23,19 +25,20 @@ print("Uploading firmware, please wait...")
 vl53 = vl53l5cx.VL53L5CX()
 print("Done!")
 vl53.set_resolution(8 * 8)
+vl53.start_ranging()
 
 this_program = program.ProgramStatus()
 button_start = Button(17)  # these are BCM numbers
 button_stop = Button(27)
 
-motor_left = Motor(5, 6, pin_factory=factory)
-motor_right = Motor(13, 19, pin_factory=factory)
+motor_left = Motor(6, 5)
+motor_right = Motor(19, 13)
 
 edge_detector = edge_detection.EdgeDetector()
 
-ultrasonic_opponent_detector = ultrasonic_opponent_detection.OpponentDetector(
-    DISTANCE_THRESHOLD_ULTRASONIC
-)
+# ultrasonic_opponent_detector = ultrasonic_opponent_detection.OpponentDetector(
+#  DISTANCE_THRESHOLD_ULTRASONIC
+# )
 
 last_seen = -1  # the last direction opponent was found
 # -1 - not found
@@ -47,18 +50,20 @@ led = RGBLED(10, 9, 11)
 
 
 def start_program():
+    print("starting program")
     this_program.start()
 
 
 def stop_program():
+    print("stopping program")
     this_program.stop()
 
 
 def set_up_buttons():
-    button_start.when_pressed = (
+    button_start.when_activated = (
         start_program  # callbacks are handled in the implicitly created callback thread
     )
-    button_stop.when_released = stop_program
+    button_stop.when_activated = stop_program
 
 
 def turn_right():
@@ -72,6 +77,7 @@ def turn_left():
 
 
 def handle_edge_detection():
+    # print("Handling edge detection")
     edge_detector_states = edge_detector.get_sensor_states()
     if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
         motor_left.backward(1)
@@ -110,6 +116,7 @@ def handle_edge_detection():
 
 
 def consider_ultrasonic_sensors():
+    # print("Considering ultrasonics")
     distances = ultrasonic_opponent_detector.get_sensor_states()
     if distances["left"] > 0 and distances["right"] > 0:
         if distances["left"] < distances["right"]:
@@ -129,10 +136,13 @@ def consider_ultrasonic_sensors():
 
 
 def handle_opponent_search():
+    # print("Handling opponent search")
     if vl53.data_ready():
         data = vl53.get_data()
 
-        distance = numpy.array(data.distance).reshape((8, 8))
+        print("Getting distance from data")
+        distance = numpy.array(data.distance_mm).reshape((8, 8))
+        status = numpy.array(data.target_status).reshape((8, 8))
 
         scalar = 0
         target_distance = 0
@@ -142,7 +152,10 @@ def handle_opponent_search():
         for ox in range(8):
             for oy in range(8):
                 d = distance[ox][oy]
-                if d > DISTANCE_THRESHOLD:
+                if d > DISTANCE_THRESHOLD or not (
+                    status[ox][oy] == STATUS_RANGE_VALID
+                    or status[ox][oy] == STATUS_RANGE_VALID_LARGE_PULSE
+                ):
                     distance[ox][oy] = 0
                 else:
                     scalar += d
@@ -161,12 +174,14 @@ def handle_opponent_search():
         else:
             target_distance = 0
 
+        print("Flipping")
         distance = numpy.flip(
             distance, axis=0
         )  # I am having a hard time visualising this, should we really be flipping the matrix?
         # Not so sure this will work, we'll have to tinker quite a bit here, I expect.
 
         # Calculate the center of mass along X and Y (Should probably just remove Y in the future)
+        print(distance)
         x = 0
         y = 0
         if scalar > 0:
@@ -189,17 +204,28 @@ def handle_opponent_search():
             # Our robot will try to attack the target at full speed.
             print("Distance is {:.1f} mm.".format(target_distance))
 
+            print("Regulating motors")
             motor_left.forward(
-                min(1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET)), 1
+                min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
             )  # x > 0 will make the robot start turning right
             motor_right.forward(
-                min(1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET), 1)
+                min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
             )  # x < 0 will make the robot start turning left
+            print(
+                "Right motor speed: {:.2f}".format(
+                    min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
+                )
+            )
+            print(
+                "Left motor speed: {:.2f}".format(
+                    min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
+                )
+            )
             return 0  # Let's consider 0 to be an indicator that opponent is in front of the robot
         else:
-            return consider_ultrasonic_sensors()
+            return -1
     else:
-        return consider_ultrasonic_sensors()
+        return -1
 
 
 if __name__ == "__main__":
@@ -208,9 +234,12 @@ if __name__ == "__main__":
         motor_left.stop()
         motor_right.stop()
         first_launch = True
+        print("Entered main")
         while True:
+            # print(this_program.is_program_running())
             if this_program.is_program_running():
                 if first_launch:
+                    print("Sleeping before start")
                     sleep(5)  # sleep in the main thread
                     first_launch = False
                 led.color = (0, 1, 0)  # light up the LED green
@@ -230,13 +259,14 @@ if __name__ == "__main__":
                 first_launch = True
                 motor_left.stop()
                 motor_right.stop()
-                led.off()
+                led.color = (0, 1, 1)  # light up the LED yellow
                 sleep(0.01)
     except Exception as e:
         motor_left.stop()
         motor_right.stop()
         led.off()
         vl53.stop_ranging()
+        print(e)
         sys.exit(
             1
         )  # gpiozero automatic cleanup for GPIO is only done when exceptions are handled
