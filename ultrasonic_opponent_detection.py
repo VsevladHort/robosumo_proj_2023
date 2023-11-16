@@ -4,8 +4,8 @@ from gpiozero import DistanceSensor
 class OpponentDetector:
     def __init__(self, DISTANCE_THRESHOLD_ULTRASONIC):
         self.left_ultrasonic_sensor = DistanceSensor(
-            echo=7,
-            trigger=8,
+            echo=21,
+            trigger=20,
             threshold_distance=DISTANCE_THRESHOLD_ULTRASONIC,
             partial=True,
         )
