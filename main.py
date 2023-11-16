@@ -1,7 +1,7 @@
 import sys
 from time import sleep
 
-from gpiozero import Button, RGBLED, Motor
+from gpiozero import Button, RGBLED, Motor, Device
 import program
 import edge_detection
 import ultrasonic_opponent_detection
@@ -13,6 +13,8 @@ from gpiozero.pins.rpigpio import RPiGPIOFactory
 from gpiozero.pins.pigpio import PiGPIOFactory
 
 factory = PiGPIOFactory()
+
+Device.pin_factory = factory
 
 DISTANCE_THRESHOLD = 700  # 70cm limit in mm
 DISTANCE_THRESHOLD_ULTRASONIC = 0.7  # 70cm limit
@@ -36,9 +38,9 @@ motor_right = Motor(19, 13)
 
 edge_detector = edge_detection.EdgeDetector()
 
-# ultrasonic_opponent_detector = ultrasonic_opponent_detection.OpponentDetector(
-#  DISTANCE_THRESHOLD_ULTRASONIC
-# )
+ultrasonic_opponent_detector = ultrasonic_opponent_detection.OpponentDetector(
+    DISTANCE_THRESHOLD_ULTRASONIC
+)
 
 last_seen = -1  # the last direction opponent was found
 # -1 - not found
