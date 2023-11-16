@@ -247,6 +247,7 @@ if __name__ == "__main__":
                 if first_launch:
                     print("Sleeping before start")
                     sleep(5)  # sleep in the main thread
+                    edge_detector.set_current_surface_as_not_edge()
                     first_launch = False
                 led.color = (0, 1, 0)  # light up the LED green
                 if handle_edge_detection():
