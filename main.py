@@ -1,9 +1,9 @@
-import sys
 from time import sleep
 
 from gpiozero import Button, RGBLED, Motor, Device
 import program
 import edge_detection
+import RPi.GPIO as GPIO
 import ultrasonic_opponent_detection
 import numpy
 import vl53l5cx_ctypes as vl53l5cx
@@ -12,7 +12,7 @@ from vl53l5cx_ctypes import STATUS_RANGE_VALID, STATUS_RANGE_VALID_LARGE_PULSE
 from gpiozero.pins.rpigpio import RPiGPIOFactory
 from gpiozero.pins.pigpio import PiGPIOFactory
 
-factory = PiGPIOFactory()
+factory = RPiGPIOFactory()
 
 Device.pin_factory = factory
 
@@ -202,28 +202,28 @@ def handle_opponent_search():
             x /= 3.5  # 3.5 - average value of our coordinates
             x -= 1.0  # at this point x is in range from 0 to 2, we bring it to -1 to 1 for speed control
 
-            print("Object detected at x: {:.2f}, y: {:.2f}".format(x, y))
+            # print("Object detected at x: {:.2f}, y: {:.2f}".format(x, y))
 
-            # Our robot will try to attack the target at full speed.
-            print("Distance is {:.1f} mm.".format(target_distance))
+            # # Our robot will try to attack the target at full speed.
+            # print("Distance is {:.1f} mm.".format(target_distance))
 
-            print("Regulating motors")
+            # print("Regulating motors")
             motor_left.forward(
                 min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
             )  # x > 0 will make the robot start turning right
             motor_right.forward(
                 min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
             )  # x < 0 will make the robot start turning left
-            print(
-                "Right motor speed: {:.2f}".format(
-                    min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-                )
-            )
-            print(
-                "Left motor speed: {:.2f}".format(
-                    min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-                )
-            )
+            # print(
+            #     "Right motor speed: {:.2f}".format(
+            #         min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
+            #     )
+            # )
+            # print(
+            #     "Left motor speed: {:.2f}".format(
+            #         min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
+            #     )
+            # )
             return 0  # Let's consider 0 to be an indicator that opponent is in front of the robot
         else:
             return consider_ultrasonic_sensors()
@@ -262,7 +262,6 @@ if __name__ == "__main__":
                     turn_right()
                 elif last_seen != 0:
                     turn_right()
-                sleep(0.01)  # Do we need it?
             else:
                 first_launch = True
                 motor_left.stop()
@@ -270,12 +269,11 @@ if __name__ == "__main__":
                 led.color = (1, 1, 0)  # light up the LED yellow
                 sleep(0.01)
     except Exception as e:
+        print("Exiting because of interrupt or error")
+        print(e)
+    finally:
         motor_left.stop()
         motor_right.stop()
         led.off()
         vl53.stop_ranging()
-        print(e)
-        sys.exit(
-            1
-        )  # gpiozero automatic cleanup for GPIO is only done when exceptions are handled
-        #  https://gpiozero.readthedocs.io/en/stable/migrating_from_rpigpio.html#cleanup
+        GPIO.cleanup()  # this ensures a clean exit
