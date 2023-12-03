@@ -5,10 +5,10 @@ import numpy
 
 class OpponentDetector:
     def __init__(self, DISTANCE_THRESHOLD_ULTRASONIC):
-        self.MIN_MEANINGFUL_DISTANCE = 3
-        self.MEASUREMENT_TIMEOUT = 0.025
-        self.left_echo = 21
-        self.left_trigger = 20
+        self.MIN_MEANINGFUL_DISTANCE = 3  # in cm
+        self.MEASUREMENT_TIMEOUT = 0.025  # in seconds
+        self.left_echo = 7
+        self.left_trigger = 8
         self.right_echo = 16
         self.right_trigger = 12
         self.DISTANCE_THRESHOLD_ULTRASONIC = DISTANCE_THRESHOLD_ULTRASONIC
