@@ -1,3 +1,43 @@
+import RPi.GPIO as GPIO
+
+
+class EdgeDetector:
+    def __init__(self):
+        self.GPIO_PIN_left_top = 18
+        self.GPIO_PIN_right_top = 23
+        self.GPIO_PIN_left_back = 24
+        self.GPIO_PIN_right_back = 25
+        self.current_surface_is_line = False
+
+        GPIO.setup(self.GPIO_PIN_left_top, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(self.GPIO_PIN_right_top, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(self.GPIO_PIN_left_back, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(self.GPIO_PIN_right_back, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+    def get_sensor_states(self):
+        if self.current_surface_is_line:
+            return {
+                "top_left": not GPIO.input(self.GPIO_PIN_left_top),
+                "top_right": not GPIO.input(self.GPIO_PIN_right_top),
+                "bottom_left": not GPIO.input(self.GPIO_PIN_left_back),
+                "bottom_right": not GPIO.input(self.GPIO_PIN_right_back),
+            }
+        else:
+            return {
+                "top_left": GPIO.input(self.GPIO_PIN_left_top),
+                "top_right": GPIO.input(self.GPIO_PIN_right_top),
+                "bottom_left": GPIO.input(self.GPIO_PIN_left_back),
+                "bottom_right": GPIO.input(self.GPIO_PIN_right_back),
+            }
+
+    def set_current_surface_as_not_edge(self):
+        if GPIO.input(self.GPIO_PIN_left_top):
+            self.current_surface_is_line = True
+        else:
+            self.current_surface_is_line = False
+
+
+"""
 from gpiozero import LineSensor
 
 
@@ -70,3 +110,4 @@ class EdgeDetector:
             self.current_surface_is_line = True
         else:
             self.current_surface_is_line = False
+"""
