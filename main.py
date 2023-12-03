@@ -17,7 +17,7 @@ factory = RPiGPIOFactory()
 Device.pin_factory = factory
 
 DISTANCE_THRESHOLD = 700  # 70cm limit in mm
-DISTANCE_THRESHOLD_ULTRASONIC = 0.7  # 70cm limit
+DISTANCE_THRESHOLD_ULTRASONIC = 70  # 70cm limit
 TURNING_SPEED_FOR_SEARCHING_TARGET = (
     0.5  # speed at which to run the motors while turning during search
 )
