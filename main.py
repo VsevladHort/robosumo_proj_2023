@@ -82,36 +82,36 @@ def handle_edge_detection():
     # print("Handling edge detection")
     edge_detector_states = edge_detector.get_sensor_states()
     if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
-        motor_left.backward(1)
+        motor_left.backward(0.5)
         motor_right.backward(1)  # moving straight backwards
         return True
     elif edge_detector_states["top_left"] and edge_detector_states["bottom_left"]:
-        motor_left.forward(0.6)
-        motor_right.forward(1)  # moving forwards while turning right
+        motor_left.forward(1)
+        motor_right.backward(0.6)  # moving forwards while turning right
         return True
     elif edge_detector_states["top_right"] and edge_detector_states["bottom_right"]:
-        motor_left.forward(1)
-        motor_right.forward(0.6)  # moving forwards while turning left
+        motor_left.backward(0.5)
+        motor_right.forward(1)  # moving forwards while turning left
         return True
     elif edge_detector_states["bottom_left"] and edge_detector_states["bottom_right"]:
         motor_left.forward(1)
         motor_right.forward(1)  # moving straights forwards
         return True
     elif edge_detector_states["top_left"]:
-        motor_left.backward(1)
+        motor_left.forward(1)
         motor_right.backward(0.6)  # moving backwards while turning left
         return True
     elif edge_detector_states["bottom_left"]:
-        motor_left.forward(0.6)
+        motor_left.backward(0.6)
         motor_right.forward(1)  # moving forwards while turning right
         return True
     elif edge_detector_states["top_right"]:
         motor_left.backward(1)
-        motor_right.backward(0.6)  # moving backwards while turning left
+        motor_right.forward(0.6)  # moving backwards while turning left
         return True
     elif edge_detector_states["bottom_right"]:
-        motor_left.forward(1)
-        motor_right.forward(0.6)  # moving forwards while turning left
+        motor_left.backward(0.6)
+        motor_right.forward(1)  # moving forwards while turning left
         return True
     else:
         return False
