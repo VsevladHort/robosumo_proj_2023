@@ -58,6 +58,9 @@ def start_program():
 
 def stop_program():
     print("stopping program")
+    motor_left.stop()
+    motor_right.stop()
+    led.value = (1, 0, 0)  # red - emergency stop underway
     this_program.stop()
 
 
