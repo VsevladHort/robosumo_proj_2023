@@ -2,6 +2,8 @@ import RPi.GPIO as GPIO
 import ultrasonic_opponent_detection
 from time import sleep
 
+GPIO.setmode(GPIO.BCM)
+
 detector = ultrasonic_opponent_detection.OpponentDetector(70)
 try:
     while True:

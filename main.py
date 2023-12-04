@@ -21,7 +21,7 @@ DISTANCE_THRESHOLD_ULTRASONIC = 70  # 70cm limit
 TURNING_SPEED_FOR_SEARCHING_TARGET = (
     0.5  # speed at which to run the motors while turning during search
 )
-TURNING_SPEED_FOR_CENTERING_TARGET = 0.6  # Scales the speed at which robot turns when trying to keep it's target in the center of it's FOV
+TURNING_SPEED_FOR_CENTERING_TARGET = 3  # Scales the speed at which robot turns when trying to keep it's target in the center of it's FOV
 
 print("Uploading firmware, please wait...")
 vl53 = vl53l5cx.VL53L5CX()
@@ -33,7 +33,7 @@ this_program = program.ProgramStatus()
 button_start = Button(17)  # these are BCM numbers
 button_stop = Button(27)
 
-motor_left = Motor(6, 5)
+motor_left = Motor(5, 6)
 motor_right = Motor(19, 13)
 
 edge_detector = edge_detection.EdgeDetector()
@@ -120,6 +120,7 @@ def handle_edge_detection():
 def consider_ultrasonic_sensors():
     # print("Considering ultrasonics")
     distances = ultrasonic_opponent_detector.get_sensor_states()
+    print(distances)
     if distances["left"] > 0 and distances["right"] > 0:
         if distances["left"] < distances["right"]:
             turn_left()
@@ -138,11 +139,11 @@ def consider_ultrasonic_sensors():
 
 
 def handle_opponent_search():
-    # print("Handling opponent search")
+    # print("Handling opponent search)
     if vl53.data_ready():
         data = vl53.get_data()
 
-        print("Getting distance from data")
+        # print("Getting distance from data")
         distance = numpy.array(data.distance_mm).reshape((8, 8))
         status = numpy.array(data.target_status).reshape((8, 8))
 
@@ -167,7 +168,7 @@ def handle_opponent_search():
 
         # Get a total from all the distances within our accepted target
         for ox in range(8):
-            for oy in range(8):
+            for oy in range(3, 8):
                 d = distance[ox][oy]
                 target_distance += d
                 if d > 0:
@@ -189,14 +190,14 @@ def handle_opponent_search():
         y = 0
         if scalar > 0:
             for ox in range(8):
-                for oy in range(2, 8):
+                for oy in range(3, 8):
                     y += distance[ox][oy] * ox
             y /= scalar
             y /= 3.5
             y -= 1.0
 
-            for oy in range(8):
-                for ox in range(2, 8):
+            for oy in range(3, 8):
+                for ox in range(8):
                     x += distance[ox][oy] * oy
             x /= scalar  # x should be the only thing we care about when it comes to aligning the robot
             x /= 3.5  # 3.5 - average value of our coordinates
@@ -208,22 +209,19 @@ def handle_opponent_search():
             print("Distance is {:.1f} mm.".format(target_distance))
 
             # print("Regulating motors")
-            motor_left.forward(
-                min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-            )  # x > 0 will make the robot start turning right
-            motor_right.forward(
-                min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-            )  # x < 0 will make the robot start turning left
-            # print(
-            #     "Right motor speed: {:.2f}".format(
-            #         min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-            #     )
-            # )
-            # print(
-            #     "Left motor speed: {:.2f}".format(
-            #         min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-            #     )
-            # )
+            left_speed = min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
+            right_speed = min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
+            if right_speed < -1:
+                right_speed = -1
+            if left_speed < -1:
+                left_speed = -1
+            motor_left.value = left_speed
+            motor_right.value = (
+                right_speed  # x < 0 will make the robot start turning left
+            )
+
+            print("Right motor speed: {:.2f}".format(right_speed))
+            print("Left motor speed: {:.2f}".format(left_speed))
             return 0  # Let's consider 0 to be an indicator that opponent is in front of the robot
         else:
             return consider_ultrasonic_sensors()
@@ -242,6 +240,10 @@ if __name__ == "__main__":
         first_launch = True
         print("Entered main")
         while True:
+            if button_start.is_pressed:
+                start_program()
+            if button_stop.is_pressed:
+                stop_program()
             # print(this_program.is_program_running())
             if this_program.is_program_running():
                 if first_launch:

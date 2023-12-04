@@ -7,13 +7,18 @@ class OpponentDetector:
     def __init__(self, DISTANCE_THRESHOLD_ULTRASONIC):
         self.MIN_MEANINGFUL_DISTANCE = 3  # in cm
         self.MEASUREMENT_TIMEOUT = 0.025  # in seconds
-        self.left_echo = 7
-        self.left_trigger = 8
+        self.left_echo = 21
+        self.left_trigger = 20
         self.right_echo = 16
         self.right_trigger = 12
         self.DISTANCE_THRESHOLD_ULTRASONIC = DISTANCE_THRESHOLD_ULTRASONIC
 
         self.sensors_state = {"left": 0, "right": 0}
+
+        GPIO.setup(self.left_echo, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(self.left_trigger, GPIO.OUT)
+        GPIO.setup(self.right_echo, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(self.right_trigger, GPIO.OUT)
 
     # get distance in cm
     def distance(self, echo, trigger):
@@ -30,6 +35,7 @@ class OpponentDetector:
             StopTime = time.time()
 
         while GPIO.input(echo) == 1:
+            # print("received echo on pin " + str(echo))
             StopTime = time.time()
 
         TimeElapsed = StopTime - StartTime
