@@ -189,23 +189,23 @@ def handle_opponent_search():
         y = 0
         if scalar > 0:
             for ox in range(8):
-                for oy in range(8):
+                for oy in range(2, 8):
                     y += distance[ox][oy] * ox
             y /= scalar
             y /= 3.5
             y -= 1.0
 
             for oy in range(8):
-                for ox in range(8):
+                for ox in range(2, 8):
                     x += distance[ox][oy] * oy
             x /= scalar  # x should be the only thing we care about when it comes to aligning the robot
             x /= 3.5  # 3.5 - average value of our coordinates
             x -= 1.0  # at this point x is in range from 0 to 2, we bring it to -1 to 1 for speed control
 
-            # print("Object detected at x: {:.2f}, y: {:.2f}".format(x, y))
+            print("Object detected at x: {:.2f}, y: {:.2f}".format(x, y))
 
             # # Our robot will try to attack the target at full speed.
-            # print("Distance is {:.1f} mm.".format(target_distance))
+            print("Distance is {:.1f} mm.".format(target_distance))
 
             # print("Regulating motors")
             motor_left.forward(
