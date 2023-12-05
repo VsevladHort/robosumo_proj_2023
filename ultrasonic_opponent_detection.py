@@ -7,6 +7,7 @@ class OpponentDetector:
     def __init__(self, DISTANCE_THRESHOLD_ULTRASONIC):
         self.MIN_MEANINGFUL_DISTANCE = 3  # in cm
         self.MEASUREMENT_TIMEOUT = 0.025  # in seconds
+        self.ECHO_LISTENING_TIMEOUT = 0.1  # in seconds
         self.left_echo = 21
         self.left_trigger = 20
         self.right_echo = 16
@@ -34,11 +35,15 @@ class OpponentDetector:
             StartTime = time.time()
             StopTime = time.time()
 
-        while GPIO.input(echo) == 1:
-            # print("received echo on pin " + str(echo))
+        RealStartTime = StartTime
+
+        while (
+            GPIO.input(echo) == 1 and StopTime - StartTime < self.ECHO_LISTENING_TIMEOUT
+        ):
+            StartTime = time.time()
             StopTime = time.time()
 
-        TimeElapsed = StopTime - StartTime
+        TimeElapsed = StopTime - RealStartTime
         distance = (TimeElapsed * 34300) / 2
 
         return distance
