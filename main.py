@@ -156,15 +156,17 @@ def handle_opponent_search():
         # Filter out unwanted distance values
         # Unlike in the pimoroni example, I think we should only care about distance to the object and not it's reflectance
         for ox in range(8):
-            for oy in range(3, 8):
+            for oy in range(8):
                 d = distance[ox][oy]
-                if d > DISTANCE_THRESHOLD or not (status[ox][oy] == STATUS_RANGE_VALID):
+                if d > DISTANCE_THRESHOLD or not (
+                    status[ox][oy] == STATUS_RANGE_VALID
+                    or status[ox][oy] == STATUS_RANGE_VALID_LARGE_PULSE
+                ):
                     distance[ox][oy] = 0
                 else:
                     distance[ox][oy] = (
                         DISTANCE_THRESHOLD - d
                     )  # We are insterested in closer targets having a higner weight, thus this operation
-                    scalar += distance[ox][oy]
 
         # Get a total from all the distances within our accepted target
         for ox in range(8):
@@ -173,6 +175,8 @@ def handle_opponent_search():
                 target_distance += d
                 if d > 0:
                     n_distances += 1
+
+        scalar = target_distance
 
         # Average the target distance
         if n_distances > 0:
@@ -186,6 +190,7 @@ def handle_opponent_search():
 
         # Calculate the center of mass along X and Y (Should probably just remove Y in the future)
         print(distance)
+        print(status)
         x = 0
         y = 0
         if scalar > 0:
