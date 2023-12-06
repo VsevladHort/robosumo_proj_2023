@@ -21,7 +21,7 @@ DISTANCE_THRESHOLD_ULTRASONIC = 70  # 70cm limit
 TURNING_SPEED_FOR_SEARCHING_TARGET = (
     0.5  # speed at which to run the motors while turning during search
 )
-TURNING_SPEED_FOR_CENTERING_TARGET = 3  # Scales the speed at which robot turns when trying to keep it's target in the center of it's FOV
+TURNING_SPEED_FOR_CENTERING_TARGET = 1.5  # Scales the speed at which robot turns when trying to keep it's target in the center of it's FOV
 
 print("Uploading firmware, please wait...")
 vl53 = vl53l5cx.VL53L5CX()
@@ -156,12 +156,9 @@ def handle_opponent_search():
         # Filter out unwanted distance values
         # Unlike in the pimoroni example, I think we should only care about distance to the object and not it's reflectance
         for ox in range(8):
-            for oy in range(8):
+            for oy in range(3, 8):
                 d = distance[ox][oy]
-                if d > DISTANCE_THRESHOLD or not (
-                    status[ox][oy] == STATUS_RANGE_VALID
-                    or status[ox][oy] == STATUS_RANGE_VALID_LARGE_PULSE
-                ):
+                if d > DISTANCE_THRESHOLD or not (status[ox][oy] == STATUS_RANGE_VALID):
                     distance[ox][oy] = 0
                 else:
                     distance[ox][oy] = (
@@ -243,10 +240,6 @@ if __name__ == "__main__":
         first_launch = True
         print("Entered main")
         while True:
-            if button_start.is_pressed:
-                start_program()
-            if button_stop.is_pressed:
-                stop_program()
             # print(this_program.is_program_running())
             if this_program.is_program_running():
                 if first_launch:
@@ -268,6 +261,7 @@ if __name__ == "__main__":
                 elif last_seen != 0:
                     turn_right()
             else:
+                print("I am stopped")
                 first_launch = True
                 motor_left.stop()
                 motor_right.stop()

@@ -8,8 +8,8 @@ class OpponentDetector:
         self.MIN_MEANINGFUL_DISTANCE = 3  # in cm
         self.MEASUREMENT_TIMEOUT = 0.025  # in seconds
         self.ECHO_LISTENING_TIMEOUT = 0.1  # in seconds
-        self.left_echo = 21
-        self.left_trigger = 20
+        self.left_echo = 7
+        self.left_trigger = 8
         self.right_echo = 16
         self.right_trigger = 12
         self.DISTANCE_THRESHOLD_ULTRASONIC = DISTANCE_THRESHOLD_ULTRASONIC
@@ -31,16 +31,21 @@ class OpponentDetector:
         StartTime = time.time()
         StopTime = time.time()
 
-        while GPIO.input(echo) == 0 and StopTime - StartTime < self.MEASUREMENT_TIMEOUT:
+        trigStartTime = time.time()
+
+        while (
+            GPIO.input(echo) == 0
+            and StopTime - trigStartTime < self.MEASUREMENT_TIMEOUT
+        ):
             StartTime = time.time()
             StopTime = time.time()
 
         RealStartTime = StartTime
 
         while (
-            GPIO.input(echo) == 1 and StopTime - StartTime < self.ECHO_LISTENING_TIMEOUT
+            GPIO.input(echo) == 1
+            and trigStartTime - StopTime < self.ECHO_LISTENING_TIMEOUT
         ):
-            StartTime = time.time()
             StopTime = time.time()
 
         TimeElapsed = StopTime - RealStartTime
