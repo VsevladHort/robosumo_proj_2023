@@ -126,16 +126,12 @@ def consider_ultrasonic_sensors():
     print(distances)
     if distances["left"] > 0 and distances["right"] > 0:
         if distances["left"] < distances["right"]:
-            turn_left()
             return 1
         else:
-            turn_right()
             return 2
     elif distances["left"] > 0:
-        turn_left()
         return 1
     elif distances["right"] > 0:
-        turn_right()
         return 2
     else:
         return -1
@@ -169,8 +165,8 @@ def handle_opponent_search():
                     )  # We are insterested in closer targets having a higner weight, thus this operation
 
         # Get a total from all the distances within our accepted target
-        for ox in range(8):
-            for oy in range(3, 8):
+        for ox in range(5):
+            for oy in range(8):
                 d = distance[ox][oy]
                 target_distance += d
                 if d > 0:
@@ -185,17 +181,17 @@ def handle_opponent_search():
         else:
             target_distance = 0
 
-        print("Flipping")
-        distance = numpy.flip(distance, axis=0)
+        # print("Flipping")
+        # distance = numpy.flip(distance, axis=0)
 
         # Calculate the center of mass along X and Y (Should probably just remove Y in the future)
+        # SHOULD USE Y INSTEAD OF X
         print(distance)
-        print(status)
         x = 0
         y = 0
         if scalar > 0:
-            for ox in range(8):
-                for oy in range(3, 8):
+            for ox in range(3, 8):
+                for oy in range(8):
                     y += distance[ox][oy] * ox
             y /= scalar
             y /= 3.5
@@ -203,23 +199,28 @@ def handle_opponent_search():
 
             for oy in range(3, 8):
                 for ox in range(8):
-                    x += distance[ox][oy] * oy
+                    x += distance[oy][ox] * oy
             x /= scalar  # x should be the only thing we care about when it comes to aligning the robot
             x /= 3.5  # 3.5 - average value of our coordinates
             x -= 1.0  # at this point x is in range from 0 to 2, we bring it to -1 to 1 for speed control
 
-            print("Object detected at x: {:.2f}, y: {:.2f}".format(x, y))
+            print("Object detected at x: {:.2f}, y: {:.2f}".format(y, x))
 
             # # Our robot will try to attack the target at full speed.
             print("Distance is {:.1f} mm.".format(target_distance))
 
-            # print("Regulating motors")
-            left_speed = min(((1 - (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-            right_speed = min(((1 + (x * TURNING_SPEED_FOR_CENTERING_TARGET))), 1)
-            if right_speed < -1:
-                right_speed = -1
-            if left_speed < -1:
-                left_speed = -1
+            print("Regulating motors")
+            max_speed = 0.8
+            left_speed = min(
+                ((max_speed - (y * TURNING_SPEED_FOR_CENTERING_TARGET))), max_speed
+            )
+            right_speed = min(
+                ((max_speed + (y * TURNING_SPEED_FOR_CENTERING_TARGET))), max_speed
+            )
+            if right_speed < -max_speed:
+                right_speed = -max_speed
+            if left_speed < -max_speed:
+                left_speed = -max_speed
             motor_left.value = left_speed
             motor_right.value = (
                 right_speed  # x < 0 will make the robot start turning left
@@ -266,11 +267,11 @@ if __name__ == "__main__":
                 elif last_seen != 0:
                     turn_right()
             else:
-                print("I am stopped")
+                # print("I am stopped")
                 first_launch = True
                 motor_left.stop()
                 motor_right.stop()
-                led.color = (1, 1, 0)  # light up the LED yellow
+                led.color = (1, 0, 0)  # light up the LED RED
                 sleep(0.01)
     except Exception as e:
         print("Exiting because of interrupt or error")
