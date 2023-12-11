@@ -64,10 +64,6 @@ class Direction(Enum):
 
 
 last_seen = Direction.NOT_FOUND  # the last direction opponent was found
-# -1 - not found
-# 0 - front
-# 1 - left
-# 2 - right
 
 led = RGBLED(10, 9, 11)
 
@@ -185,7 +181,7 @@ def handle_edge_detection():
 
 def consider_ultrasonic_sensors():
     distances = ultrasonic_opponent_detector.get_sensor_states()
-    if distances["back"] < 50:
+    if distances["back"] < 50 and distances["back"] > 0:
         return Direction.BACK
     if distances["left"] > 0 and distances["right"] > 0:
         if distances["left"] < distances["right"]:

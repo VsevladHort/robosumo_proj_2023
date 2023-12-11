@@ -5,7 +5,7 @@ import numpy
 
 class OpponentDetector:
     def __init__(self, DISTANCE_THRESHOLD_ULTRASONIC):
-        self.MIN_MEANINGFUL_DISTANCE = 3  # in cm
+        self.MIN_MEANINGFUL_DISTANCE = 2  # in cm
         self.MEASUREMENT_TIMEOUT = 0.025  # in seconds
         self.ECHO_LISTENING_TIMEOUT = 0.1  # in seconds
         self.left_echo = 7
@@ -81,7 +81,7 @@ class OpponentDetector:
         ):
             self.sensors_state["back"] = median_back_distance
         else:
-            self.sensors_state["back"] = 1
+            self.sensors_state["back"] = 0
 
         if (
             self.MIN_MEANINGFUL_DISTANCE
