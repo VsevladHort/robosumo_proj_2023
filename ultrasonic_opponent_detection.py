@@ -12,9 +12,12 @@ class OpponentDetector:
         self.left_trigger = 8
         self.right_echo = 16
         self.right_trigger = 12
+        self.back_echo = 21
+        self.back_trigger = 20
         self.DISTANCE_THRESHOLD_ULTRASONIC = DISTANCE_THRESHOLD_ULTRASONIC
+        self.DISTANCE_THRESHOLD_BACK = 50
 
-        self.sensors_state = {"left": 0, "right": 0}
+        self.sensors_state = {"left": 0, "right": 0, "back": 0}
 
         GPIO.setup(self.left_echo, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.left_trigger, GPIO.OUT)
@@ -56,16 +59,29 @@ class OpponentDetector:
     def update_sensor_states(self):
         left_distances = []
         right_distances = []
+        back_distances = []
 
         for _ in range(6):
             left_distance = self.distance(self.left_echo, self.left_trigger)
             right_distance = self.distance(self.right_echo, self.right_trigger)
+            back_distances = self.distance(self.back_echo, self.back_trigger)
 
             left_distances.append(left_distance)
             right_distances.append(right_distance)
+            back_distances.append(back_distances)
 
         median_left_distance = numpy.median(left_distances)
         median_right_distance = numpy.median(right_distances)
+        median_back_distance = numpy.median(back_distances)
+
+        if (
+            self.MIN_MEANINGFUL_DISTANCE
+            <= median_back_distance
+            <= self.DISTANCE_THRESHOLD_ULTRASONIC
+        ):
+            self.sensors_state["back"] = median_back_distance
+        else:
+            self.sensors_state["back"] = 1
 
         if (
             self.MIN_MEANINGFUL_DISTANCE
