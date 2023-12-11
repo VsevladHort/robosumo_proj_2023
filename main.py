@@ -23,17 +23,21 @@ TURNING_SPEED_FOR_SEARCHING_TARGET = (
 )
 TURNING_SPEED_FOR_CENTERING_TARGET = 1.5  # Scales the speed at which robot turns when trying to keep it's target in the center of it's FOV
 
+MAX_SPEED = 0.8
+
 print("Uploading firmware, please wait...")
 vl53 = vl53l5cx.VL53L5CX()
 print("Done!")
 vl53.set_resolution(8 * 8)
+vl53.set_ranging_frequency_hz(60)
+vl53.set_integration_time_ms(5)
 vl53.start_ranging()
 
 this_program = program.ProgramStatus()
 button_start = Button(17)  # these are BCM numbers
 button_stop = Button(27)
 
-motor_left = Motor(5, 6)
+motor_left = Motor(6, 5)
 motor_right = Motor(19, 13)
 
 edge_detector = edge_detection.EdgeDetector()
@@ -72,11 +76,13 @@ def set_up_buttons():
 
 
 def turn_right():
+    print("RIGHT")
     motor_left.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
     motor_right.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
 
 def turn_left():
+    print("LEFT")
     motor_left.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
     motor_right.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
@@ -85,36 +91,77 @@ def handle_edge_detection():
     # print("Handling edge detection")
     edge_detector_states = edge_detector.get_sensor_states()
     if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
-        motor_left.backward(0.5)
-        motor_right.backward(1)  # moving straight backwards
+        motor_left.backward(0.7)
+        motor_right.backward(0.7)
+        sleep(0.4)
+        motor_left.forward(0.7)
+        motor_right.backward(0.7)
+        sleep(0.6)
         return True
     elif edge_detector_states["top_left"] and edge_detector_states["bottom_left"]:
-        motor_left.forward(1)
-        motor_right.backward(0.6)  # moving forwards while turning right
+        motor_left.forward(0.7)
+        motor_right.backward(0.7)
+        sleep(0.3)
+        motor_left.forward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.1)
         return True
     elif edge_detector_states["top_right"] and edge_detector_states["bottom_right"]:
-        motor_left.backward(0.5)
-        motor_right.forward(1)  # moving forwards while turning left
+        motor_left.backward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.3)
+        motor_left.forward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.1)
         return True
     elif edge_detector_states["bottom_left"] and edge_detector_states["bottom_right"]:
-        motor_left.forward(1)
-        motor_right.forward(1)  # moving straights forwards
+        motor_left.forward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.1)
         return True
     elif edge_detector_states["top_left"]:
-        motor_left.forward(1)
-        motor_right.backward(0.6)  # moving backwards while turning left
+        motor_left.backward(0.5)
+        motor_right.backward(0.5)
+        sleep(0.7)
+        motor_left.forward(0.7)
+        motor_right.backward(0.7)
+        sleep(1)
+        motor_left.forward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.3)
         return True
     elif edge_detector_states["bottom_left"]:
-        motor_left.backward(0.6)
-        motor_right.forward(1)  # moving forwards while turning right
+        motor_left.forward(0.5)
+        motor_right.forward(0.5)
+        sleep(0.7)
+        motor_left.forward(0.7)
+        motor_right.backward(0.7)
+        sleep(1)
+        motor_left.forward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.3)
         return True
     elif edge_detector_states["top_right"]:
-        motor_left.backward(1)
-        motor_right.forward(0.6)  # moving backwards while turning left
+        motor_left.backward(0.5)
+        motor_right.backward(0.5)
+        sleep(0.7)
+        motor_left.backward(0.7)
+        motor_right.forward(0.7)
+        sleep(1)
+        motor_left.forward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.3)
         return True
     elif edge_detector_states["bottom_right"]:
-        motor_left.backward(0.6)
-        motor_right.forward(1)  # moving forwards while turning left
+        motor_left.forward(0.5)
+        motor_right.forward(0.5)
+        sleep(0.7)
+        motor_left.backward(0.7)
+        motor_right.forward(0.7)
+        sleep(1)
+        motor_left.forward(0.7)
+        motor_right.forward(0.7)
+        sleep(0.3)
         return True
     else:
         return False
@@ -154,10 +201,7 @@ def handle_opponent_search():
         for ox in range(8):
             for oy in range(8):
                 d = distance[ox][oy]
-                if d > DISTANCE_THRESHOLD or not (
-                    status[ox][oy] == STATUS_RANGE_VALID
-                    or status[ox][oy] == STATUS_RANGE_VALID_LARGE_PULSE
-                ):
+                if d > DISTANCE_THRESHOLD or not (status[ox][oy] == STATUS_RANGE_VALID):
                     distance[ox][oy] = 0
                 else:
                     distance[ox][oy] = (
@@ -189,15 +233,15 @@ def handle_opponent_search():
         print(distance)
         x = 0
         y = 0
-        if scalar > 0:
-            for ox in range(3, 8):
+        if scalar > 0 and n_distances > 6:
+            for ox in range(4, 8):
                 for oy in range(8):
                     y += distance[ox][oy] * ox
             y /= scalar
             y /= 3.5
             y -= 1.0
 
-            for oy in range(3, 8):
+            for oy in range(4, 8):
                 for ox in range(8):
                     x += distance[oy][ox] * oy
             x /= scalar  # x should be the only thing we care about when it comes to aligning the robot
@@ -221,19 +265,24 @@ def handle_opponent_search():
                 right_speed = -max_speed
             if left_speed < -max_speed:
                 left_speed = -max_speed
+            """
             motor_left.value = left_speed
             motor_right.value = (
                 right_speed  # x < 0 will make the robot start turning left
             )
+            """
+            motor_left.value = 0.5
+            motor_right.value = 0.5
 
-            print("Right motor speed: {:.2f}".format(right_speed))
-            print("Left motor speed: {:.2f}".format(left_speed))
+            print("Right motor speed: {:.2f}".format(motor_left.value))
+            print("Left motor speed: {:.2f}".format(motor_right.value))
+
             return 0  # Let's consider 0 to be an indicator that opponent is in front of the robot
         else:
-            return consider_ultrasonic_sensors()
+            return -1
     else:
         if last_seen != 0:
-            return consider_ultrasonic_sensors()
+            return -1
         else:
             return 0
 
@@ -254,18 +303,38 @@ if __name__ == "__main__":
                     edge_detector.set_current_surface_as_not_edge()
                     last_seen = -1
                     first_launch = False
-                led.color = (0, 1, 0)  # light up the LED green
-                if handle_edge_detection():
-                    sleep(1)  # give the robot some time to get away from the edge
-                opponent_search_result = handle_opponent_search()
-                if opponent_search_result != -1:
+                # print(edge_detector.get_sensor_states())
+                is_edge = handle_edge_detection()
+                if is_edge:
+                    led.color = (1, 0, 0)
+                    # sleep(1)  # give the robot some time to get away from the edge
+                    print(
+                        "Right motor speed while getting away: {:.2f}".format(
+                            motor_left.value
+                        )
+                    )
+                    print(
+                        "Left motor speed while getting away: {:.2f}".format(
+                            motor_right.value
+                        )
+                    )
+                if not is_edge:
+                    opponent_search_result = handle_opponent_search()
                     last_seen = opponent_search_result
-                elif last_seen == 1:
-                    turn_left()
-                elif last_seen == 2:
-                    turn_right()
-                elif last_seen != 0:
-                    turn_right()
+                    if last_seen == 0:
+                        led.color = (0, 0, 1)
+                    print(last_seen)
+                    if opponent_search_result != -1:
+                        last_seen = opponent_search_result
+                    elif last_seen == 1:
+                        led.color = (0, 1, 0)  # light up the LED green
+                        turn_left()
+                    elif last_seen == 2:
+                        led.color = (0, 1, 0)  # light up the LED green
+                        turn_right()
+                    elif last_seen != 0:
+                        led.color = (0, 1, 0)  # light up the LED green
+                        turn_right()
             else:
                 # print("I am stopped")
                 first_launch = True
