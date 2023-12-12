@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 
 from gpiozero import Button, RGBLED, Motor, Device
 from enum import Enum, auto
@@ -99,80 +99,186 @@ def turn_left():
     motor_right.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
 
+def get_away_from_edge(timeout):
+    StartTime = time()
+    StopTime = time()
+    while StopTime - StartTime < timeout:
+        edge_detector_states = edge_detector.get_sensor_states()
+        if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
+            motor_left.backward(0.7)
+            motor_right.backward(0.7)
+            if get_away_from_edge(0.4):
+                return True
+            motor_left.forward(0.7)
+            motor_right.backward(0.7)
+            get_away_from_edge(0.6)
+            return True
+        elif edge_detector_states["top_left"] and edge_detector_states["bottom_left"]:
+            motor_left.forward(0.7)
+            motor_right.backward(0.7)
+            if get_away_from_edge(0.3):
+                return True
+            motor_left.forward(0.7)
+            motor_right.forward(0.7)
+            get_away_from_edge(0.1)
+            return True
+        elif edge_detector_states["top_right"] and edge_detector_states["bottom_right"]:
+            motor_left.backward(0.7)
+            motor_right.forward(0.7)
+            if get_away_from_edge(0.3):
+                return True
+            motor_left.forward(0.7)
+            motor_right.forward(0.7)
+            get_away_from_edge(0.1)
+            return True
+        elif (
+            edge_detector_states["bottom_left"] and edge_detector_states["bottom_right"]
+        ):
+            motor_left.forward(0.7)
+            motor_right.forward(0.7)
+            get_away_from_edge(0.1)
+            return True
+        elif edge_detector_states["top_left"]:
+            motor_left.backward(0.5)
+            motor_right.backward(0.5)
+            if get_away_from_edge(0.7):
+                return True
+            motor_left.forward(0.7)
+            motor_right.backward(0.7)
+            if get_away_from_edge(1):
+                return True
+            motor_left.forward(0.7)
+            motor_right.forward(0.7)
+            get_away_from_edge(0.3)
+            return True
+        elif edge_detector_states["bottom_left"]:
+            motor_left.forward(0.5)
+            motor_right.forward(0.5)
+            if get_away_from_edge(0.7):
+                return True
+            motor_left.forward(0.7)
+            motor_right.backward(0.7)
+            if get_away_from_edge(1):
+                return True
+            motor_left.forward(0.7)
+            motor_right.forward(0.7)
+            get_away_from_edge(0.3)
+            return True
+        elif edge_detector_states["top_right"]:
+            motor_left.backward(0.5)
+            motor_right.backward(0.5)
+            if get_away_from_edge(0.7):
+                return True
+            motor_left.backward(0.7)
+            motor_right.forward(0.7)
+            if get_away_from_edge(1):
+                return True
+            motor_left.forward(0.7)
+            motor_right.forward(0.7)
+            get_away_from_edge(0.3)
+            return True
+        elif edge_detector_states["bottom_right"]:
+            motor_left.forward(0.5)
+            motor_right.forward(0.5)
+            if get_away_from_edge(0.7):
+                return True
+            motor_left.backward(0.7)
+            motor_right.forward(0.7)
+            if get_away_from_edge(0.7):
+                return True
+            motor_left.forward(0.7)
+            motor_right.forward(0.7)
+            get_away_from_edge(0.3)
+            return True
+        StopTime = time()
+    return False
+
+
 def handle_edge_detection():
     edge_detector_states = edge_detector.get_sensor_states()
     if edge_detector_states["top_left"] and edge_detector_states["top_right"]:
         motor_left.backward(0.7)
         motor_right.backward(0.7)
-        sleep(0.4)
+        if get_away_from_edge(0.4):
+            return True
         motor_left.forward(0.7)
         motor_right.backward(0.7)
-        sleep(0.6)
+        get_away_from_edge(0.6)
         return True
     elif edge_detector_states["top_left"] and edge_detector_states["bottom_left"]:
         motor_left.forward(0.7)
         motor_right.backward(0.7)
-        sleep(0.3)
+        if get_away_from_edge(0.3):
+            return True
         motor_left.forward(0.7)
         motor_right.forward(0.7)
-        sleep(0.1)
+        get_away_from_edge(0.1)
         return True
     elif edge_detector_states["top_right"] and edge_detector_states["bottom_right"]:
         motor_left.backward(0.7)
         motor_right.forward(0.7)
-        sleep(0.3)
+        if get_away_from_edge(0.3):
+            return True
         motor_left.forward(0.7)
         motor_right.forward(0.7)
-        sleep(0.1)
+        get_away_from_edge(0.1)
         return True
     elif edge_detector_states["bottom_left"] and edge_detector_states["bottom_right"]:
         motor_left.forward(0.7)
         motor_right.forward(0.7)
-        sleep(0.1)
+        get_away_from_edge(0.1)
         return True
     elif edge_detector_states["top_left"]:
         motor_left.backward(0.5)
         motor_right.backward(0.5)
-        sleep(0.7)
+        if get_away_from_edge(0.7):
+            return True
         motor_left.forward(0.7)
         motor_right.backward(0.7)
-        sleep(1)
+        if get_away_from_edge(1):
+            return True
         motor_left.forward(0.7)
         motor_right.forward(0.7)
-        sleep(0.3)
+        get_away_from_edge(0.3)
         return True
     elif edge_detector_states["bottom_left"]:
         motor_left.forward(0.5)
         motor_right.forward(0.5)
-        sleep(0.7)
+        if get_away_from_edge(0.7):
+            return True
         motor_left.forward(0.7)
         motor_right.backward(0.7)
-        sleep(1)
+        if get_away_from_edge(1):
+            return True
         motor_left.forward(0.7)
         motor_right.forward(0.7)
-        sleep(0.3)
+        get_away_from_edge(0.3)
         return True
     elif edge_detector_states["top_right"]:
         motor_left.backward(0.5)
         motor_right.backward(0.5)
-        sleep(0.7)
+        if get_away_from_edge(0.7):
+            return True
         motor_left.backward(0.7)
         motor_right.forward(0.7)
-        sleep(1)
+        if get_away_from_edge(1):
+            return True
         motor_left.forward(0.7)
         motor_right.forward(0.7)
-        sleep(0.3)
+        get_away_from_edge(0.3)
         return True
     elif edge_detector_states["bottom_right"]:
         motor_left.forward(0.5)
         motor_right.forward(0.5)
-        sleep(0.7)
+        if get_away_from_edge(0.7):
+            return True
         motor_left.backward(0.7)
         motor_right.forward(0.7)
-        sleep(1)
+        if get_away_from_edge(0.7):
+            return True
         motor_left.forward(0.7)
         motor_right.forward(0.7)
-        sleep(0.3)
+        get_away_from_edge(0.3)
         return True
     else:
         return False
