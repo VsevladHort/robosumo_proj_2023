@@ -90,13 +90,11 @@ def set_up_buttons():
 
 
 def turn_right():
-    print("RIGHT")
     motor_left.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
     motor_right.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
 
 def turn_left():
-    print("LEFT")
     motor_left.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
     motor_right.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
@@ -182,7 +180,6 @@ def handle_edge_detection():
 
 def consider_ultrasonic_sensors():
     distances = ultrasonic_opponent_detector.get_sensor_states()
-    print(distances)
     if distances["back"] < 50 and distances["back"] > 0:
         return Direction.FRONT
     if distances["left"] > 0 and distances["right"] > 0:
@@ -293,7 +290,6 @@ def handle_opponent_search():
     #         return consider_ultrasonic_sensors()
     # else:
     if last_seen != Direction.FRONT:
-        print("Considering ultrasonics")
         return consider_ultrasonic_sensors()
     else:
         return last_seen
@@ -317,15 +313,15 @@ def launch_search_routine():
         led.color = (0, 0, 1)  # light up the LED blue
         motor_left.value = -1
         motor_right.value = -1
-        print(motor_left.value)
-        print(motor_right.value)
     elif opponent_search_result != Direction.FRONT:
-        led.color = (0, 1, 0)  # light up the LED green
         if last_seen == Direction.RIGHT:
+            led.color = (0, 1, 0)  # light up the LED green
             turn_right()
         elif last_seen == Direction.LEFT:
+            led.color = (0, 1, 0)  # light up the LED green
             turn_left()
         elif last_seen == Direction.FRONT:
+            led.color = (0, 0, 1)  # light up the LED blue
             motor_left.value = -MAX_SPEED
             motor_right.value = -MAX_SPEED
     if opponent_search_result != Direction.NOT_FOUND:
