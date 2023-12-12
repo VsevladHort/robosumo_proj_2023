@@ -24,11 +24,11 @@ Device.pin_factory = factory
 DISTANCE_THRESHOLD = 700  # 70cm limit in mm
 DISTANCE_THRESHOLD_ULTRASONIC = 70  # 70cm limit
 TURNING_SPEED_FOR_SEARCHING_TARGET = (
-    0.8  # speed at which to run the motors while turning during search
+    0.6  # speed at which to run the motors while turning during search
 )
 TURNING_SPEED_FOR_CENTERING_TARGET = 1.0  # Scales the speed at which robot turns when trying to keep it's target in the center of it's FOV
 
-MAX_SPEED = 0.8
+MAX_SPEED = 0.75
 
 print("Uploading firmware, please wait...")
 vl53 = vl53l5cx.VL53L5CX()
@@ -36,7 +36,7 @@ print("Done!")
 vl53.set_resolution(8 * 8)
 vl53.set_ranging_frequency_hz(60)
 vl53.set_integration_time_ms(
-    15
+    5
 )  # the amount of time for a reading, cannot be greater than what is possible due to set frequency
 # maybe it will help us with precision?..
 vl53.start_ranging()
@@ -181,6 +181,7 @@ def handle_edge_detection():
 
 def consider_ultrasonic_sensors():
     distances = ultrasonic_opponent_detector.get_sensor_states()
+    print(distances)
     if distances["back"] < 50 and distances["back"] > 0:
         return Direction.BACK
     if distances["left"] > 0 and distances["right"] > 0:
@@ -217,7 +218,7 @@ def handle_opponent_search():
                     )  # We are insterested in closer targets having a higher weight, thus this operation
 
         # Get a total from all the distances within our accepted target
-        for ox in range(5):
+        for ox in range(4):
             for oy in range(8):
                 d = distance[ox][oy]
                 target_distance += d
@@ -239,7 +240,7 @@ def handle_opponent_search():
         print(distance)
         vertical = 0
         horizontal = 0
-        if scalar > 0 and n_distances > 6:
+        if scalar > 0 and n_distances > 4:
             for ox in range(4, 8):
                 for oy in range(8):
                     horizontal += distance[ox][oy] * ox
@@ -274,11 +275,11 @@ def handle_opponent_search():
             if left_speed < -MAX_SPEED:
                 left_speed = -MAX_SPEED
 
-            motor_left.value = left_speed
-            motor_right.value = right_speed
+            motor_left.value = MAX_SPEED
+            motor_right.value = MAX_SPEED
 
             # if distance is sufficiently short, just attack at full speed.
-            if target_distance < 250:
+            if target_distance < 200:
                 motor_left.value = 1
                 motor_right.value = 1
 
@@ -287,9 +288,11 @@ def handle_opponent_search():
 
             return Direction.FRONT
         else:
+            print("I should be printed")
             return consider_ultrasonic_sensors()
     else:
         if last_seen != Direction.FRONT:
+            print("Me too!")
             return consider_ultrasonic_sensors()
         else:
             return Direction.FRONT
@@ -298,11 +301,12 @@ def handle_opponent_search():
 def launch_search_routine():
     opponent_search_result = handle_opponent_search()
     last_seen = opponent_search_result
+    print(last_seen)
     if last_seen == Direction.FRONT:
         led.color = (0, 0, 1)
     if opponent_search_result != Direction.NOT_FOUND:
         last_seen = opponent_search_result
-    elif last_seen == Direction.LEFT:
+    if last_seen == Direction.LEFT:
         led.color = (0, 1, 0)  # light up the LED green
         turn_left()
     elif last_seen == Direction.RIGHT:
@@ -312,6 +316,8 @@ def launch_search_routine():
         led.color = (0, 0, 1)  # light up the LED blue
         motor_left.value = -1
         motor_right.value = -1
+        print(motor_left.value)
+        print(motor_right.value)
     elif last_seen != Direction.FRONT:
         led.color = (0, 1, 0)  # light up the LED green
         turn_right()
@@ -330,7 +336,7 @@ if __name__ == "__main__":
                     print("Sleeping before start")
                     sleep(5)  # sleep in the main thread
                     edge_detector.set_current_surface_as_not_edge()
-                    last_seen = -1
+                    last_seen = Direction.NOT_FOUND
                     first_launch = False
                 is_edge = handle_edge_detection()
                 if is_edge:

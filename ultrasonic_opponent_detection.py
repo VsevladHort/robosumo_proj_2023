@@ -23,6 +23,8 @@ class OpponentDetector:
         GPIO.setup(self.left_trigger, GPIO.OUT)
         GPIO.setup(self.right_echo, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.right_trigger, GPIO.OUT)
+        GPIO.setup(self.back_echo, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(self.back_trigger, GPIO.OUT)
 
     # get distance in cm
     def distance(self, echo, trigger):
@@ -64,11 +66,11 @@ class OpponentDetector:
         for _ in range(6):
             left_distance = self.distance(self.left_echo, self.left_trigger)
             right_distance = self.distance(self.right_echo, self.right_trigger)
-            back_distances = self.distance(self.back_echo, self.back_trigger)
+            back_distance = self.distance(self.back_echo, self.back_trigger)
 
             left_distances.append(left_distance)
             right_distances.append(right_distance)
-            back_distances.append(back_distances)
+            back_distances.append(back_distance)
 
         median_left_distance = numpy.median(left_distances)
         median_right_distance = numpy.median(right_distances)
