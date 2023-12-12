@@ -6,9 +6,10 @@ import program
 import edge_detection
 import RPi.GPIO as GPIO
 import ultrasonic_opponent_detection
-import numpy
-import vl53l5cx_ctypes as vl53l5cx
-from vl53l5cx_ctypes import STATUS_RANGE_VALID, STATUS_RANGE_VALID_LARGE_PULSE
+
+# import numpy
+# import vl53l5cx_ctypes as vl53l5cx
+# from vl53l5cx_ctypes import STATUS_RANGE_VALID, STATUS_RANGE_VALID_LARGE_PULSE
 
 from gpiozero.pins.rpigpio import RPiGPIOFactory
 
@@ -30,16 +31,16 @@ TURNING_SPEED_FOR_CENTERING_TARGET = 1.0  # Scales the speed at which robot turn
 
 MAX_SPEED = 0.75
 
-print("Uploading firmware, please wait...")
-vl53 = vl53l5cx.VL53L5CX()
-print("Done!")
-vl53.set_resolution(8 * 8)
-vl53.set_ranging_frequency_hz(60)
-vl53.set_integration_time_ms(
-    5
-)  # the amount of time for a reading, cannot be greater than what is possible due to set frequency
-# maybe it will help us with precision?..
-vl53.start_ranging()
+# print("Uploading firmware, please wait...")
+# vl53 = vl53l5cx.VL53L5CX()
+# print("Done!")
+# vl53.set_resolution(8 * 8)
+# vl53.set_ranging_frequency_hz(60)
+# vl53.set_integration_time_ms(
+#     5
+# )  # the amount of time for a reading, cannot be greater than what is possible due to set frequency
+# # maybe it will help us with precision?..
+# vl53.start_ranging()
 
 this_program = program.ProgramStatus()
 button_start = Button(17)  # these are BCM numbers
@@ -90,14 +91,14 @@ def set_up_buttons():
 
 def turn_right():
     print("RIGHT")
-    motor_left.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
-    motor_right.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
+    motor_left.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
+    motor_right.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
 
 def turn_left():
     print("LEFT")
-    motor_left.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
-    motor_right.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
+    motor_left.forward(TURNING_SPEED_FOR_SEARCHING_TARGET)
+    motor_right.backward(TURNING_SPEED_FOR_SEARCHING_TARGET)
 
 
 def handle_edge_detection():
@@ -183,7 +184,7 @@ def consider_ultrasonic_sensors():
     distances = ultrasonic_opponent_detector.get_sensor_states()
     print(distances)
     if distances["back"] < 50 and distances["back"] > 0:
-        return Direction.BACK
+        return Direction.FRONT
     if distances["left"] > 0 and distances["right"] > 0:
         if distances["left"] < distances["right"]:
             return Direction.LEFT
@@ -198,129 +199,137 @@ def consider_ultrasonic_sensors():
 
 
 def handle_opponent_search():
-    if vl53.data_ready():
-        data = vl53.get_data()
+    # if vl53.data_ready():
+    #     data = vl53.get_data()
 
-        distance = numpy.array(data.distance_mm).reshape((8, 8))
-        status = numpy.array(data.target_status).reshape((8, 8))
+    #     distance = numpy.array(data.distance_mm).reshape((8, 8))
+    #     status = numpy.array(data.target_status).reshape((8, 8))
 
-        scalar = 0  # sum of all valid distances
-        target_distance = 0  # average distance to target
-        n_distances = 0  # number of valid distance readings
-        for ox in range(8):
-            for oy in range(8):
-                d = distance[ox][oy]
-                if d > DISTANCE_THRESHOLD or not (status[ox][oy] == STATUS_RANGE_VALID):
-                    distance[ox][oy] = 0
-                else:
-                    distance[ox][oy] = (
-                        DISTANCE_THRESHOLD - d
-                    )  # We are insterested in closer targets having a higher weight, thus this operation
+    #     scalar = 0  # sum of all valid distances
+    #     target_distance = 0  # average distance to target
+    #     n_distances = 0  # number of valid distance readings
+    #     for ox in range(8):
+    #         for oy in range(8):
+    #             d = distance[ox][oy]
+    #             if d > DISTANCE_THRESHOLD or not (status[ox][oy] == STATUS_RANGE_VALID):
+    #                 distance[ox][oy] = 0
+    #             else:
+    #                 distance[ox][oy] = (
+    #                     DISTANCE_THRESHOLD - d
+    #                 )  # We are insterested in closer targets having a higher weight, thus this operation
 
-        # Get a total from all the distances within our accepted target
-        for ox in range(4):
-            for oy in range(8):
-                d = distance[ox][oy]
-                target_distance += d
-                if d > 0:
-                    n_distances += 1
+    #     # Get a total from all the distances within our accepted target
+    #     for ox in range(4):
+    #         for oy in range(8):
+    #             d = distance[ox][oy]
+    #             target_distance += d
+    #             if d > 0:
+    #                 n_distances += 1
 
-        scalar = target_distance
+    #     scalar = target_distance
 
-        # Average the target distance
-        if n_distances > 0:
-            target_distance /= n_distances
-            target_distance = DISTANCE_THRESHOLD - target_distance
-        else:
-            target_distance = 0
+    #     # Average the target distance
+    #     if n_distances > 0:
+    #         target_distance /= n_distances
+    #         target_distance = DISTANCE_THRESHOLD - target_distance
+    #     else:
+    #         target_distance = 0
 
-        # Calculate the center of mass along horizontal and vertical axes
-        # horizontal coordinates should be the only thing we care about when it comes to aligning the robot
-        # 3.5 - average value of our coordinates
-        print(distance)
-        vertical = 0
-        horizontal = 0
-        if scalar > 0 and n_distances > 4:
-            for ox in range(4, 8):
-                for oy in range(8):
-                    horizontal += distance[ox][oy] * ox
-            horizontal /= scalar
-            horizontal /= 3.5
-            horizontal -= 1.0  # at this point horizontal is in range from 0 to 2, we bring it to -1 to 1 for speed control
+    #     # Calculate the center of mass along horizontal and vertical axes
+    #     # horizontal coordinates should be the only thing we care about when it comes to aligning the robot
+    #     # 3.5 - average value of our coordinates
+    #     print(distance)
+    #     vertical = 0
+    #     horizontal = 0
+    #     if scalar > 0 and n_distances > 4:
+    #         for ox in range(4, 8):
+    #             for oy in range(8):
+    #                 horizontal += distance[ox][oy] * ox
+    #         horizontal /= scalar
+    #         horizontal /= 3.5
+    #         horizontal -= 1.0  # at this point horizontal is in range from 0 to 2, we bring it to -1 to 1 for speed control
 
-            for oy in range(4, 8):
-                for ox in range(8):
-                    vertical += distance[oy][ox] * oy
-            vertical /= scalar
-            vertical /= 3.5
-            vertical -= 1.0
+    #         for oy in range(4, 8):
+    #             for ox in range(8):
+    #                 vertical += distance[oy][ox] * oy
+    #         vertical /= scalar
+    #         vertical /= 3.5
+    #         vertical -= 1.0
 
-            print(
-                "Object detected at x: {:.2f}, y: {:.2f}".format(horizontal, vertical)
-            )
+    #         print(
+    #             "Object detected at x: {:.2f}, y: {:.2f}".format(horizontal, vertical)
+    #         )
 
-            print("Distance is {:.1f} mm.".format(target_distance))
+    #         print("Distance is {:.1f} mm.".format(target_distance))
 
-            print("Regulating motors")
-            left_speed = min(
-                ((MAX_SPEED - (horizontal * TURNING_SPEED_FOR_CENTERING_TARGET))),
-                MAX_SPEED,
-            )
-            right_speed = min(
-                ((MAX_SPEED + (horizontal * TURNING_SPEED_FOR_CENTERING_TARGET))),
-                MAX_SPEED,
-            )
-            if right_speed < -MAX_SPEED:
-                right_speed = -MAX_SPEED
-            if left_speed < -MAX_SPEED:
-                left_speed = -MAX_SPEED
+    #         print("Regulating motors")
+    #         left_speed = min(
+    #             ((MAX_SPEED - (horizontal * TURNING_SPEED_FOR_CENTERING_TARGET))),
+    #             MAX_SPEED,
+    #         )
+    #         right_speed = min(
+    #             ((MAX_SPEED + (horizontal * TURNING_SPEED_FOR_CENTERING_TARGET))),
+    #             MAX_SPEED,
+    #         )
+    #         if right_speed < -MAX_SPEED:
+    #             right_speed = -MAX_SPEED
+    #         if left_speed < -MAX_SPEED:
+    #             left_speed = -MAX_SPEED
 
-            motor_left.value = MAX_SPEED
-            motor_right.value = MAX_SPEED
+    #         motor_left.value = MAX_SPEED
+    #         motor_right.value = MAX_SPEED
 
-            # if distance is sufficiently short, just attack at full speed.
-            if target_distance < 200:
-                motor_left.value = 1
-                motor_right.value = 1
+    #         # if distance is sufficiently short, just attack at full speed.
+    #         if target_distance < 200:
+    #             motor_left.value = 1
+    #             motor_right.value = 1
 
-            print("Right motor speed: {:.2f}".format(motor_left.value))
-            print("Left motor speed: {:.2f}".format(motor_right.value))
+    #         print("Right motor speed: {:.2f}".format(motor_left.value))
+    #         print("Left motor speed: {:.2f}".format(motor_right.value))
 
-            return Direction.FRONT
-        else:
-            print("I should be printed")
-            return consider_ultrasonic_sensors()
+    #         return Direction.FRONT
+    #     else:
+    #         print("I should be printed")
+    #         return consider_ultrasonic_sensors()
+    # else:
+    if last_seen != Direction.FRONT:
+        print("Considering ultrasonics")
+        return consider_ultrasonic_sensors()
     else:
-        if last_seen != Direction.FRONT:
-            print("Me too!")
-            return consider_ultrasonic_sensors()
-        else:
-            return Direction.FRONT
+        return last_seen
 
 
 def launch_search_routine():
     opponent_search_result = handle_opponent_search()
     last_seen = opponent_search_result
     print(last_seen)
-    if last_seen == Direction.FRONT:
+    if opponent_search_result == Direction.FRONT:
+        motor_left.value = -MAX_SPEED
+        motor_right.value = -MAX_SPEED
         led.color = (0, 0, 1)
-    if opponent_search_result != Direction.NOT_FOUND:
-        last_seen = opponent_search_result
-    if last_seen == Direction.LEFT:
-        led.color = (0, 1, 0)  # light up the LED green
+    if opponent_search_result == Direction.LEFT:
         turn_left()
-    elif last_seen == Direction.RIGHT:
         led.color = (0, 1, 0)  # light up the LED green
+    elif opponent_search_result == Direction.RIGHT:
         turn_right()
-    elif last_seen == Direction.BACK:
+        led.color = (0, 1, 0)  # light up the LED green
+    elif opponent_search_result == Direction.BACK:
         led.color = (0, 0, 1)  # light up the LED blue
         motor_left.value = -1
         motor_right.value = -1
         print(motor_left.value)
         print(motor_right.value)
-    elif last_seen != Direction.FRONT:
+    elif opponent_search_result != Direction.FRONT:
         led.color = (0, 1, 0)  # light up the LED green
-        turn_right()
+        if last_seen == Direction.RIGHT:
+            turn_right()
+        elif last_seen == Direction.LEFT:
+            turn_left()
+        elif last_seen == Direction.FRONT:
+            motor_left.value = -MAX_SPEED
+            motor_right.value = -MAX_SPEED
+    if opponent_search_result != Direction.NOT_FOUND:
+        last_seen = opponent_search_result
 
 
 if __name__ == "__main__":
@@ -356,5 +365,5 @@ if __name__ == "__main__":
         motor_left.stop()
         motor_right.stop()
         led.off()
-        vl53.stop_ranging()
+        # vl53.stop_ranging()
         GPIO.cleanup()  # this ensures a clean exit

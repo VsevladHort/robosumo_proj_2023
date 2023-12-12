@@ -63,7 +63,7 @@ class OpponentDetector:
         right_distances = []
         back_distances = []
 
-        for _ in range(6):
+        for _ in range(4):
             left_distance = self.distance(self.left_echo, self.left_trigger)
             right_distance = self.distance(self.right_echo, self.right_trigger)
             back_distance = self.distance(self.back_echo, self.back_trigger)
